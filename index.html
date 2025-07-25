@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+ <meta name="theme-color" content="#000000"/>
+ <title>RayBOT Trained Assistant</title>
+ <link rel="manifest" href="manifest.json" />
+ <style>
+   body { margin: 0; font-family: sans-serif; background: #111; color: #fff; display: flex; flex-direction: column; height: 100vh; }
+   header { background: #222; padding: 1em; text-align: center; font-size: 1.2em; font-weight: bold; }
+   #chat { flex: 1; padding: 1em; overflow-y: auto; }
+   .msg { margin: .5em 0; }
+   .user { text-align: right; color: #0f0; }
+   .bot { text-align: left; color: #0af; }
+   form { display: flex; border-top: 1px solid #333; }
+   input, button { font-size: 1em; }
+   input { flex: 1; padding: 1em; border: none; background: #000; color: #fff; }
+   button { background: #333; color: #fff; padding: 1em; border: none; }
+   #trainer, #auth { background: #222; padding: 1em; display: none; flex-direction: column; gap: .5em; }
+   #trainer input, #auth input { width: 100%; padding: 0.5em; }
+   #trainer button, #auth button { background: #0af; border: none; padding: 0.5em; color: #000; font-weight: bold; }
+ </style>
+</head>
+<body>
+ <header>🤖 RayBOT Trained Assistant</header>
+ <div id="chat"></div>
+ <form id="form">
+   <input id="input" autocomplete="off" placeholder="Ask me something..." />
+   <button type="submit">Send</button>
+ </form>
+
+ <div id="auth">
+   <input id="idInput" placeholder="ID" />
+   <input id="pwInput" type="password" placeholder="Password" />
+   <button onclick="checkAuth()">🔐 Unlock Trainer</button>
+ </div>
+
+ <div id="trainer">
+   <input id="trainQ" placeholder="If user says..." />
+   <input id="trainA" placeholder="RayBOT should reply..." />
+   <button onclick="train()">➕ Save Response</button>
+ </div>
+
+ <script>
+   const input = document.getElementById('input');
+   const chat = document.getElementById('chat');
+   const form = document.getElementById('form');
+   const trainQ = document.getElementById('trainQ');
+   const trainA = document.getElementById('trainA');
+   const idInput = document.getElementById('idInput');
+   const pwInput = document.getElementById('pwInput');
+   const trainer = document.getElementById('trainer');
+   const auth = document.getElementById('auth');
+
+   // Show login form on load
+   window.addEventListener('load', () => {
+     auth.style.display = 'flex';
+   });
+
+   // Login credentials
+   const ADMIN_ID = "1";
+   const ADMIN_PASSWORD = "2";
+
+   function checkAuth() {
+     if (idInput.value === ADMIN_ID && pwInput.value === ADMIN_PASSWORD) {
+       auth.style.display = 'none';
+       trainer.style.display = 'flex';
+     } else {
+       alert("❌ Invalid ID or password.");
+       idInput.value = '';
+       pwInput.value = '';
+     }
+   }
+
+   let history = JSON.parse(localStorage.getItem('chat') || '[]');
+   let memory = JSON.parse(localStorage.getItem('memory') || '{}');
+
+   function addMessage(text, sender) {
+     const div = document.createElement('div');
+     div.className = 'msg ' + sender;
+     div.textContent = text;
+     chat.appendChild(div);
+     chat.scrollTop = chat.scrollHeight;
+   }
+
+   function respond(msg) {
+     const lower = msg.toLowerCase();
+     for (let q in memory) {
+       if (lower.includes(q.toLowerCase())) return memory[q];
+     }
+
+     // Default responses
+     if (lower.includes('hello') || lower.includes('hi')) return "Hi there! How can I help you?";
+     if (lower.includes('time')) return `Current time is ${new Date().toLocaleTimeString()}.`;
+     if (lower.includes('date')) return `Today's date is ${new Date().toLocaleDateString()}.`;
+     if (lower.includes('who are you')) return "I'm RayBOT, your offline assistant.";
+     if (lower.includes('help')) return "You can teach me, if you're authorized.";
+     return "Sorry, I don't understand that yet.";
+   }
+
+   function save() {
+     localStorage.setItem('chat', JSON.stringify(history));
+     localStorage.setItem('memory', JSON.stringify(memory));
+   }
+
+   function train() {
+     const question = trainQ.value.trim().toLowerCase();
+     const answer = trainA.value.trim();
+     if (question && answer) {
+       memory[question] = answer;
+       trainQ.value = '';
+       trainA.value = '';
+       alert('✅ Saved! I will now respond to that.');
+       save();
+     }
+   }
+
+   history.forEach(([text, sender]) => addMessage(text, sender));
+
+   form.onsubmit = e => {
+     e.preventDefault();
+     const text = input.value.trim();
+     if (!text) return;
+     history.push([text, 'user']);
+     addMessage(text, 'user');
+     input.value = '';
+     const reply = respond(text);
+     history.push([reply, 'bot']);
+     setTimeout(() => addMessage(reply, 'bot'), 500);
+     save();
+   };
+ </script>
+
+ <script>
+   // Register Service Worker
+   if ('serviceWorker' in navigator) {
+     const swCode = `
+       self.addEventListener('install', e => {
+         e.waitUntil(caches.open('raybot').then(cache => {
+           return cache.addAll(['./']);
+         }));
+         self.skipWaiting();
+       });
+       self.addEventListener('fetch', e => {
+         e.respondWith(
+           caches.match(e.request).then(response => response || fetch(e.request))
+         );
+       });
+     `;
+     const blob = new Blob([swCode], { type: 'application/javascript' });
+     const swURL = URL.createObjectURL(blob);
+     navigator.serviceWorker.register(swURL);
+   }
+ </script>
+
+ <script>
+   // Inline Manifest (no icon)
+   const manifest = {
+     name: "RayBOT",
+     short_name: "RayBOT",
+     start_url: "./",
+     display: "standalone",
+     background_color: "#000000",
+     theme_color: "#000000"
+   };
+   const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+   const manifestURL = URL.createObjectURL(blob);
+   document.querySelector('link[rel="manifest"]').setAttribute('href', manifestURL);
+ </script>
+</body>
+</html>
