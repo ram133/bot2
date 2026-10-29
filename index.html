@@ -1,172 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="UTF-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
- <meta name="theme-color" content="#000000"/>
- <title>RayBOT Trained Assistant</title>
- <link rel="manifest" href="manifest.json" />
- <style>
-   body { margin: 0; font-family: sans-serif; background: #111; color: #fff; display: flex; flex-direction: column; height: 100vh; }
-   header { background: #222; padding: 1em; text-align: center; font-size: 1.2em; font-weight: bold; }
-   #chat { flex: 1; padding: 1em; overflow-y: auto; }
-   .msg { margin: .5em 0; }
-   .user { text-align: right; color: #0f0; }
-   .bot { text-align: left; color: #0af; }
-   form { display: flex; border-top: 1px solid #333; }
-   input, button { font-size: 1em; }
-   input { flex: 1; padding: 1em; border: none; background: #000; color: #fff; }
-   button { background: #333; color: #fff; padding: 1em; border: none; }
-   #trainer, #auth { background: #222; padding: 1em; display: none; flex-direction: column; gap: .5em; }
-   #trainer input, #auth input { width: 100%; padding: 0.5em; }
-   #trainer button, #auth button { background: #0af; border: none; padding: 0.5em; color: #000; font-weight: bold; }
- </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bot2 — Automation control panel</title>
+  <meta name="theme-color" content="#0a0a0b" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root{--bg:#0a0a0b;--card:#161618;--border:#27272a;--text:#fafafa;--muted:#a1a1aa;--accent:#f97316;--font:'Inter',system-ui,sans-serif}
+    *{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6}
+    .container{max-width:720px;margin:0 auto;padding:0 1.4rem}
+    nav{padding:1rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .logo{font-weight:800;font-size:1.2rem;text-decoration:none;color:var(--text)}.logo span{color:var(--accent)}
+    .btn{display:inline-flex;padding:.55rem 1.15rem;border-radius:999px;font-weight:600;font-size:.875rem;text-decoration:none}
+    .btn-primary{background:var(--accent);color:#0a0a0b}.btn-ghost{border:1px solid var(--border);color:var(--text)}
+    .hero{padding:4.5rem 0 3rem;text-align:center}
+    .badge{display:inline-block;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.3);color:var(--accent);font-size:.75rem;font-weight:600;padding:.3rem .8rem;border-radius:999px;margin-bottom:1.2rem}
+    h1{font-size:clamp(2.1rem,5vw,3rem);font-weight:800;letter-spacing:-.04em;line-height:1.1;margin-bottom:1rem}
+    .hero p{color:var(--muted);font-size:1.1rem;max-width:480px;margin:0 auto 2rem}
+    .cta{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap}
+    section{padding:3rem 0}h2{font-size:1.5rem;font-weight:800;margin-bottom:.8rem}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}@media(max-width:520px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem}.card h3{font-size:1rem;margin-bottom:.3rem}.card p{color:var(--muted);font-size:.9rem}
+    footer{border-top:1px solid var(--border);padding:2rem 0;text-align:center;color:var(--muted);font-size:.85rem}footer a{color:var(--accent);text-decoration:none}
+  </style>
 </head>
 <body>
- <header>🤖 RayBOT Trained Assistant</header>
- <div id="chat"></div>
- <form id="form">
-   <input id="input" autocomplete="off" placeholder="Ask me something..." />
-   <button type="submit">Send</button>
- </form>
-
- <div id="auth">
-   <input id="idInput" placeholder="ID" />
-   <input id="pwInput" type="password" placeholder="Password" />
-   <button onclick="checkAuth()">🔐 Unlock Trainer</button>
- </div>
-
- <div id="trainer">
-   <input id="trainQ" placeholder="If user says..." />
-   <input id="trainA" placeholder="RayBOT should reply..." />
-   <button onclick="train()">➕ Save Response</button>
- </div>
-
- <script>
-   const input = document.getElementById('input');
-   const chat = document.getElementById('chat');
-   const form = document.getElementById('form');
-   const trainQ = document.getElementById('trainQ');
-   const trainA = document.getElementById('trainA');
-   const idInput = document.getElementById('idInput');
-   const pwInput = document.getElementById('pwInput');
-   const trainer = document.getElementById('trainer');
-   const auth = document.getElementById('auth');
-
-   // Show login form on load
-   window.addEventListener('load', () => {
-     auth.style.display = 'flex';
-   });
-
-   // Login credentials
-   const ADMIN_ID = "1";
-   const ADMIN_PASSWORD = "2";
-
-   function checkAuth() {
-     if (idInput.value === ADMIN_ID && pwInput.value === ADMIN_PASSWORD) {
-       auth.style.display = 'none';
-       trainer.style.display = 'flex';
-     } else {
-       alert("❌ Invalid ID or password.");
-       idInput.value = '';
-       pwInput.value = '';
-     }
-   }
-
-   let history = JSON.parse(localStorage.getItem('chat') || '[]');
-   let memory = JSON.parse(localStorage.getItem('memory') || '{}');
-
-   function addMessage(text, sender) {
-     const div = document.createElement('div');
-     div.className = 'msg ' + sender;
-     div.textContent = text;
-     chat.appendChild(div);
-     chat.scrollTop = chat.scrollHeight;
-   }
-
-   function respond(msg) {
-     const lower = msg.toLowerCase();
-     for (let q in memory) {
-       if (lower.includes(q.toLowerCase())) return memory[q];
-     }
-
-     // Default responses
-     if (lower.includes('hello') || lower.includes('hi')) return "Hi there! How can I help you?";
-     if (lower.includes('time')) return `Current time is ${new Date().toLocaleTimeString()}.`;
-     if (lower.includes('date')) return `Today's date is ${new Date().toLocaleDateString()}.`;
-     if (lower.includes('who are you')) return "I'm RayBOT, your offline assistant.";
-     if (lower.includes('help')) return "You can teach me, if you're authorized.";
-     return "Sorry, I don't understand that yet.";
-   }
-
-   function save() {
-     localStorage.setItem('chat', JSON.stringify(history));
-     localStorage.setItem('memory', JSON.stringify(memory));
-   }
-
-   function train() {
-     const question = trainQ.value.trim().toLowerCase();
-     const answer = trainA.value.trim();
-     if (question && answer) {
-       memory[question] = answer;
-       trainQ.value = '';
-       trainA.value = '';
-       alert('✅ Saved! I will now respond to that.');
-       save();
-     }
-   }
-
-   history.forEach(([text, sender]) => addMessage(text, sender));
-
-   form.onsubmit = e => {
-     e.preventDefault();
-     const text = input.value.trim();
-     if (!text) return;
-     history.push([text, 'user']);
-     addMessage(text, 'user');
-     input.value = '';
-     const reply = respond(text);
-     history.push([reply, 'bot']);
-     setTimeout(() => addMessage(reply, 'bot'), 500);
-     save();
-   };
- </script>
-
- <script>
-   // Register Service Worker
-   if ('serviceWorker' in navigator) {
-     const swCode = `
-       self.addEventListener('install', e => {
-         e.waitUntil(caches.open('raybot').then(cache => {
-           return cache.addAll(['./']);
-         }));
-         self.skipWaiting();
-       });
-       self.addEventListener('fetch', e => {
-         e.respondWith(
-           caches.match(e.request).then(response => response || fetch(e.request))
-         );
-       });
-     `;
-     const blob = new Blob([swCode], { type: 'application/javascript' });
-     const swURL = URL.createObjectURL(blob);
-     navigator.serviceWorker.register(swURL);
-   }
- </script>
-
- <script>
-   // Inline Manifest (no icon)
-   const manifest = {
-     name: "RayBOT",
-     short_name: "RayBOT",
-     start_url: "./",
-     display: "standalone",
-     background_color: "#000000",
-     theme_color: "#000000"
-   };
-   const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-   const manifestURL = URL.createObjectURL(blob);
-   document.querySelector('link[rel="manifest"]').setAttribute('href', manifestURL);
- </script>
+  <div class="container">
+    <nav>
+      <a href="./" class="logo">Bot2 <span>·</span></a>
+      <a href="https://github.com/ram133/bot2" class="btn btn-ghost" target="_blank">GitHub</a>
+    </nav>
+    <header class="hero">
+      <div class="badge">Automation · Control panel</div>
+      <h1>Secondary bot<br>control panel.</h1>
+      <p>Companion automation interface. Status, triggers and lightweight command surface.</p>
+      <div class="cta">
+        <a href="https://github.com/ram133/bot2" class="btn btn-primary" target="_blank">Open Bot2 →</a>
+        <a href="https://ram133.github.io/bot3/" class="btn btn-ghost">Bot3</a>
+      </div>
+    </header>
+    <section>
+      <h2>Role</h2>
+      <div class="grid">
+        <div class="card"><h3>Status</h3><p>See what is running.</p></div>
+        <div class="card"><h3>Triggers</h3><p>Fire actions on demand.</p></div>
+        <div class="card"><h3>Companion</h3><p>Pairs with Bot3 for fuller coverage.</p></div>
+        <div class="card"><h3>Simple</h3><p>No unnecessary complexity.</p></div>
+      </div>
+    </section>
+    <section style="text-align:center;padding-bottom:3rem">
+      <a href="https://github.com/ram133/bot2" class="btn btn-primary" target="_blank">View on GitHub →</a>
+    </section>
+    <footer><p>Bot2 · Built with <a href="https://x.ai">Grok</a></p></footer>
+  </div>
 </body>
 </html>
